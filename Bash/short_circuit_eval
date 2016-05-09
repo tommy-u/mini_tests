@@ -1,0 +1,25 @@
+#!/bin/bash
+
+echo "It is easy to take action based on a script\'s exit status"
+echo "using shortcut evaluation. The left hand side always runs"
+echo "first, but the right hand side is more interesting."
+echo "AND, &&, will NOT eval the RHS if the LHS fails."
+echo "OR, ||, will eval the RHS ONLY IF the LHS fails."
+echo 
+
+echo "The four cases:"
+
+echo "&&"
+#Conditional exit exits 0, success when input is 0. 
+#Failure
+./conditional_exit 1 && echo NO PRINT
+#Success
+./conditional_exit 0 && echo PRINT
+
+echo
+echo "||"
+#Failure
+./conditional_exit 1 || echo PRINT
+#Success
+./conditional_exit 0 || echo NO PRINT
+
