@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#I wrote this for testing, but realized it's exactly what true and false do!
 if [ "$#" -ne 1 ]
 then
     echo "Usage: ./conditional_exit <input>"

@@ -1,0 +1,8 @@
+((0)) && echo hi1
+((0)) || echo hi2
+((1)) && echo hi3
+((1)) || echo hi4
+
+if ((2)); then echo case1; else echo case2; fi
+if ((1)); then echo case1; else echo case2; fi
+if ((0)); then echo case1; else echo case2; fi

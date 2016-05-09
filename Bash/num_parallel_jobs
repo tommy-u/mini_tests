@@ -1,0 +1,52 @@
+#!/bin/bash
+set -eo pipefail
+count=0
+#When run sequential, count is fine.
+#When run in parallel, count is still fine, but might not finish in order.
+sleepy(){
+    echo $count about to sleep
+    sleep 3
+    echo done $count 
+}
+
+#Sequential snooze fest 60.04 sec
+a() {
+local count=0
+local i
+for i in {1..20}; 
+do 
+    count=$((count+1))
+    sleepy
+done
+}
+
+#Run all 20 in 3.019s. Run 400 in 3.070
+b() {
+local count=0
+local i
+for i in {1..20}; #for i in {1..2000}; fork problems at ~ 500
+do 
+    count=$((count+1))
+    (sleepy) &
+done
+wait
+}
+
+#batches of size 4 not ideal, waits for slowest in batch
+c() {
+    local max_jobs=4
+    local count=0
+    local i
+    for i in {1..20}; 
+    do 
+
+	#When the mod is 0, it evals to false, and will issue wait.
+	(( $count % $max_jobs )) || { wait; } 
+	(sleepy) &
+	count=$((count+1))
+    done
+    wait
+}
+
+((0))
+
