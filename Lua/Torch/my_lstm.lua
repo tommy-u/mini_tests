@@ -7,10 +7,6 @@ require 'nngraph'
 local LSTM = {}
 
 function LSTM.create(input_size, rnn_size)
-   --Bogus start state at first. Later updated with real persistant state.
---   local c_storage = torch.randn(rnn_size)
---   local h_storage = torch.randn(rnn_size)
-      
    --Pass through input layers.
    --Input at time t.
    local input = nn.Identity()()
@@ -24,7 +20,6 @@ function LSTM.create(input_size, rnn_size)
    --Sometimes people run input and prev through xforms separately and add.
    --I'm simply doing a concatenation of last hidden state (output) and input.
    local cat = nn.JoinTable(1)({input, prev_h})
-
    local size_cat = input_size + rnn_size
 
    ---------- The gates ---------- 
@@ -48,30 +43,24 @@ function LSTM.create(input_size, rnn_size)
    --Add anything we want from the current data.
    local c = nn.CAddTable()({c, xs})
 
-      ---------- Output State ---------- 
+   ---------- Output State ---------- 
    --Squish cell state.
    local h = nn.Tanh()(c)
    --Only pass forward what the gate desires.
    local h = nn.CMulTable()({h, o})
    
-   --Put the hidden state through a linear layer to 
    local outputs = {c, h}
    
    --Package up into module 
-   gmod = nn.gModule( inputs, outputs ) 
-
-   return gmod
-   
+   return nn.gModule( inputs, outputs ) 
 end
 
 function LSTM.train( model, x, y, criterion, learningRate, i)
-
-   
-   --Forward execution, produces { c, h}
+   --Forward execution, produces {c, h}
    local prediction = model:forward(x)
    --Determine error signal
    local err = criterion:forward(prediction[2], y)
---   if i % 100 == 1 then print('error for iteration ' .. i  .. ' is ' .. err) end
+   --   if i % 100 == 1 then print('error for iteration ' .. i  .. ' is ' .. err) end
    local gradOutputs = criterion:backward(prediction[2], y)
    model:backward( x ,  { gradOutputs, gradOutputs}  ) --best of the 3 for learning identity
    --   model:backward( x ,  { nil, gradOutputs}  ) --trains but not as well
