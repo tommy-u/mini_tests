@@ -50,7 +50,7 @@ def peek_net_param(net, i):
         top = bottom + l[0].size + l[1].size
         if i >= bottom and i < top:
             if i >= bottom and i < bottom + l[0].size:
-                return l[0].item(i-bottom) #NO PARTICULAR ORDERING
+                return l[0].item(i-bottom) #Order?
             else:
                 return l[1].item(i-(bottom + l[0].size))
         bottom = top
@@ -91,21 +91,64 @@ def deriv_param(net, l, inp, i):
 
 def all_params_grad(net, l, inp):
     '''Get grad of all params.'''
-    return np.array([ deriv_param(net, l, inp, i) for i in range(count_net_params(net))])
+    return np.array([ 
+        deriv_param(net, l, inp, i) 
+        for i in range(count_net_params(net))])
+
+
+def flatten_net(net):
+    '''Turns net into flat vec of params.'''
+    flag = 0
+    for l in net:
+        if flag == 0:
+            a = np.concatenate((l[0].flatten(), l[1].flatten()), axis=0)
+        else:
+            a = np.concatenate((a, l[0].flatten(), l[1].flatten()), axis=0)
+        flag = 1
+    return a
+
+def expand_flat_net(net, f):
+    '''Reconstructs net from flat vec of params.'''
+    count = 0
+    for l in net:
+        s = l[0].shape
+        sz = s[0] * s[1]
+        l[0] = f[count: count + sz].reshape(s)
+        count += sz
+
+        s = l[1].shape
+        sz = s[0] * s[1]
+        l[1] = f[count: count + sz].reshape(s)
+        count += sz
+    return net
 
 def update_params(net, grad):
     '''Apply SGD to update net params'''
-    for i in range(count_net_params(net)):
-        net = poke_net_param(net, i, (peek_net_param(net, i) - grad[i]))
+    f = flatten_net(net)
+    #Move against grad
+    return expand_flat_net(net, f.reshape(f.size,1) - grad)
 
-def test_net():
+
+def train_epoch(net, l, inp):
+    '''One round of online training for each element in input set.'''
+    for j in range(len(inp)):
+        grad = all_params_grad(net, l[j], inp[j])
+        update_params(net, grad)
+        # print(mse_cost(l[j], forward_prop_sig(net, inp[j])))
+
+def get_all_outputs(net, inp):
+    '''Get outputs for each input.'''
+    return [forward_prop_sig(net, e) for e in inp]
+
+def unit_test():
     '''Unit test.'''
     np.random.seed(seed=2)
 
     net = []
-    layers = [2, 2, 4, 1]
+    layers = [2, 3, 1]
     create_net(net, layers)
-  
+
+    #Some data.
     my_inputs =  [ [0, 0], [0, 1], [1,0], [1,1] ]
     my_labels =  [ [0, 0], [0, 1], [1,0], [1,1] ]
     my_labels2 = [    [0],    [1],   [1],   [0] ]
@@ -113,19 +156,14 @@ def test_net():
     my_inputs = to_list_arr(my_inputs)
     my_labels = to_list_arr(my_labels)
 
-    print("error before")
-    print("error for 3rd input random init")
-    print(mse_cost(my_labels[3], forward_prop_sig(net, my_inputs[3])))
+    print("Before training")
+    print(get_all_outputs(net, my_inputs))
 
-    print("gradient for all params using 3rd input")
-
+    #Train net 1000 epochs
     for i in range(1000):
-        for j in range(len(my_inputs)):
-            grad = all_params_grad(net, my_labels[j], my_inputs[j])
-            update_params(net, grad)
-            print(mse_cost(my_labels[j], forward_prop_sig(net, my_inputs[j])))
+        train_epoch(net, my_labels, my_inputs)
 
-    for i in range(len(my_inputs)):
-        print(forward_prop_sig(net, my_inputs[i]))
+    print("After training")
+    print(get_all_outputs(net, my_inputs))
 
-test_net()
+unit_test()
